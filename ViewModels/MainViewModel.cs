@@ -1,6 +1,10 @@
-﻿using Microsoft.Win32;
+﻿using AForge.Math;
+using Microsoft.Win32;
+using OxyPlot;
 using poid.Commands;
 using poid.Models;
+using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Windows.Input;
 
@@ -10,45 +14,17 @@ namespace poid.ViewModels
     {
         #region Properties
 
-        private float[] _R;
-        public float[] R
+        private float[] _Channel;
+        public float[] Channel
         {
             get
             {
-                return _R;
+                return _Channel;
             }
             private set
             {
-                _R = value;
-                NotifyPropertyChanged("R");
-            }
-        }
-
-        private float[] _L;
-        public float[] L
-        {
-            get
-            {
-                return _L;
-            }
-            private set
-            {
-                _L = value;
-                NotifyPropertyChanged("L");
-            }
-        }
-
-        private MonoType? _FileMonoType;
-        public MonoType? FileMonoType
-        {
-            get
-            {
-                return _FileMonoType;
-            }
-            private set
-            {
-                _FileMonoType = value;
-                NotifyPropertyChanged("FileMonoType");
+                _Channel = value;
+                NotifyPropertyChanged("Channel");
             }
         }
 
@@ -63,6 +39,20 @@ namespace poid.ViewModels
             {
                 _FileName = value;
                 NotifyPropertyChanged("FileName");
+            }
+        }
+
+        private List<DataPoint> _Signal;
+        public List<DataPoint> Signal
+        {
+            get
+            {
+                return _Signal;
+            }
+            private set
+            {
+                _Signal = value;
+                NotifyPropertyChanged("Signal");
             }
         }
 
@@ -96,11 +86,51 @@ namespace poid.ViewModels
             }
         }
 
+        private int? _AutocorrelationFreq = null;
+        public int? AutocorrelationFreq
+        {
+            get
+            {
+                return _AutocorrelationFreq;
+            }
+            set
+            {
+                _AutocorrelationFreq = value;
+                NotifyPropertyChanged("AutocorrelationFreq");
+            }
+        }
+
+        private int? _FourierFreq = null;
+        public int? FourierFreq
+        {
+            get
+            {
+                return _FourierFreq;
+            }
+            set
+            {
+                _FourierFreq = value;
+                NotifyPropertyChanged("FourierFreq");
+            }
+        }
+
+        private List<DataPoint> _AutocorrelationData;
+        public List<DataPoint> AutocorrelationData
+        {
+            get
+            {
+                return _AutocorrelationData;
+            }
+            set
+            {
+                _AutocorrelationData = value;
+                NotifyPropertyChanged("AutocorrelationData");
+            }
+        }
+
         #endregion
 
         #region Enums
-
-        public enum MonoType { Mono, Stereo }
 
         public enum WindowType { Gauss, Hamming, Hanning, Bartlett }
 
@@ -153,30 +183,31 @@ namespace poid.ViewModels
 
             if (openFileDialog.ShowDialog() == true)
             {
-                float[] r;
-                float[] l;
-                if (WavReader.Read(openFileDialog.FileName, out l, out r))
+                float[] leftChannel;
+                float[] rightChannel;
+                WavReader.Read(openFileDialog.FileName, out leftChannel, out rightChannel);
+                this.Channel = leftChannel;
+                this.FileName = openFileDialog.FileName;
+                List<DataPoint> signal = new List<DataPoint>();
+                for (int i = 0; i < this.Channel.Length; i++)
                 {
-                    this.R = r;
-                    this.L = l;
-                    this.FileMonoType = r == null ? MonoType.Mono : MonoType.Stereo;
-                    this.FileName = openFileDialog.FileName;
-                    Notify.Info("Image loaded successfully!");
+                    signal.Add(new DataPoint(i, this.Channel[i]));
                 }
-                else
-                {
-                    Notify.Info("Failed to load file!");
-                    this.R = null;
-                    this.L = null;
-                    this.FileMonoType = null;
-                    this.FileName = null;
-                }
+                this.Signal = signal;
+                Notify.Info("WAV file loaded sucessfully!");
             }
         }
 
         private void Autocorrelation(object o)
         {
-
+            float[] autocorrelation;
+            this.AutocorrelationFreq = Models.Autocorrelation.CalculateFreq(this.Channel, out autocorrelation);
+            List<DataPoint> signal = new List<DataPoint>();
+            for (int i = 0; i < autocorrelation.Length; i++)
+            {
+                signal.Add(new DataPoint(i, autocorrelation[i]));
+            }
+            this.AutocorrelationData = signal;
         }
 
         private void FourierSpectrumAnalysis(object o)
