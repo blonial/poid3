@@ -1,6 +1,7 @@
 ﻿using Microsoft.Win32;
 using poid.Commands;
 using poid.Models;
+using System.Collections.ObjectModel;
 using System.Windows.Input;
 
 namespace poid.ViewModels
@@ -65,11 +66,43 @@ namespace poid.ViewModels
             }
         }
 
+        public ObservableCollection<WindowType> WindowTypes { get; } = new ObservableCollection<WindowType> { WindowType.Gauss, WindowType.Hamming, WindowType.Hanning, WindowType.Bartlett };
+
+        private WindowType _SelectedWindowType;
+        public WindowType SelectedWindowType
+        {
+            get
+            {
+                return _SelectedWindowType;
+            }
+            set
+            {
+                _SelectedWindowType = value;
+                NotifyPropertyChanged("SelectedWindowType");
+            }
+        }
+
+        private string _Sigma = "0.4";
+        public string Sigma
+        {
+            get
+            {
+                return _Sigma;
+            }
+            set
+            {
+                _Sigma = value;
+                NotifyPropertyChanged("Sigma");
+            }
+        }
+
         #endregion
 
         #region Enums
 
         public enum MonoType { Mono, Stereo }
+
+        public enum WindowType { Gauss, Hamming, Hanning, Bartlett }
 
         #endregion
 
@@ -78,6 +111,7 @@ namespace poid.ViewModels
         public MainViewModel()
         {
             this.InitializeCommands();
+            this.InitializeWindowTypes();
         }
 
         #endregion
@@ -87,6 +121,13 @@ namespace poid.ViewModels
         private void InitializeCommands()
         {
             this._LoadFile = new RelayCommand(this.LoadFile);
+            this._Autocorrelation = new RelayCommand(o => this.FileName != null, this.Autocorrelation);
+            this._FourierSpectrumAnalysis = new RelayCommand(o => this.FileName != null, this.FourierSpectrumAnalysis);
+        }
+
+        private void InitializeWindowTypes()
+        {
+            this.SelectedWindowType = this.WindowTypes[0];
         }
 
         #endregion
@@ -94,6 +135,10 @@ namespace poid.ViewModels
         #region Commands
 
         public ICommand _LoadFile { get; private set; }
+
+        public ICommand _Autocorrelation { get; private set; }
+
+        public ICommand _FourierSpectrumAnalysis { get; private set; }
 
         #endregion
 
@@ -127,6 +172,16 @@ namespace poid.ViewModels
                     this.FileName = null;
                 }
             }
+        }
+
+        private void Autocorrelation(object o)
+        {
+
+        }
+
+        private void FourierSpectrumAnalysis(object o)
+        {
+
         }
 
         #endregion

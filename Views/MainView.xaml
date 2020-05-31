@@ -9,6 +9,8 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
@@ -25,6 +27,34 @@
             <Button Grid.Row="0" Grid.Column="0" Height="26" Command="{Binding _LoadFile}">Load WAV file</Button>
             <Label Grid.Row="0" Grid.Column="1" Height="26" Content="{Binding FileName}" ContentStringFormat="File: {0}"/>
             <Label Grid.Row="1" Grid.Column="1" Height="26" Content="{Binding FileMonoType}" ContentStringFormat="Mono type: {0}"/>
+        </Grid>
+
+        <Button Grid.Row="1" Height="26" Command="{Binding _Autocorrelation}">Autocorrelation</Button>
+
+        <Grid Grid.Row="2">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="2*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <Button Grid.Row="0" Grid.Column="0" Height="26" Command="{Binding _FourierSpectrumAnalysis}">Fourier spectrum analysis</Button>
+            
+            <Label Grid.Row="0" Grid.Column="1" Height="26">Window</Label>
+            <ComboBox Grid.Row="0" Grid.Column="2" Height="30" ItemsSource="{Binding WindowTypes}" SelectedItem="{Binding SelectedWindowType, Mode=TwoWay}">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                        <Label Content="{Binding}"/>
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+
+            <Label Grid.Row="1" Grid.Column="1" Height="26">Sigma</Label>
+            <TextBox Grid.Row="1" Grid.Column="2" Height="26" Text="{Binding Sigma}"/>
         </Grid>
     </Grid>
 </UserControl>

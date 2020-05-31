@@ -76,6 +76,7 @@
     </Compile>
     <Compile Include="Converters\NullToVisibilityConverter.cs" />
     <Compile Include="Models\AMath.cs" />
+    <Compile Include="Models\FourierWindows.cs" />
     <Compile Include="Models\Notify.cs" />
     <Compile Include="Models\NotifyPropertyChangedEvent.cs" />
     <Compile Include="Models\WavReader.cs" />
