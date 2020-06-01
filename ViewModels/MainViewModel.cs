@@ -1,5 +1,4 @@
-﻿using AForge.Math;
-using Microsoft.Win32;
+﻿using Microsoft.Win32;
 using OxyPlot;
 using poid.Commands;
 using poid.Models;
@@ -7,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Windows.Input;
+using static poid.Models.FourierWindows;
 
 namespace poid.ViewModels
 {
@@ -130,12 +130,6 @@ namespace poid.ViewModels
 
         #endregion
 
-        #region Enums
-
-        public enum WindowType { Gauss, Hamming, Hanning, Bartlett }
-
-        #endregion
-
         #region Constuctors
 
         public MainViewModel()
@@ -212,6 +206,14 @@ namespace poid.ViewModels
 
         private void FourierSpectrumAnalysis(object o)
         {
+            try
+            {
+                float[][] data = FourierWindows.Calculate(FourierWindows.SplitData(this.Channel, 2205), this.SelectedWindowType, float.Parse(this.Sigma));
+            }
+            catch (Exception e)
+            {
+                Notify.Error(e.Message);
+            }
 
         }
 
