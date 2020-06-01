@@ -1,4 +1,5 @@
-﻿using Microsoft.Win32;
+﻿using AForge.Math;
+using Microsoft.Win32;
 using OxyPlot;
 using poid.Commands;
 using poid.Models;
@@ -209,6 +210,71 @@ namespace poid.ViewModels
             try
             {
                 float[][] data = FourierWindows.Calculate(FourierWindows.SplitData(this.Channel, 2205), this.SelectedWindowType, float.Parse(this.Sigma));
+                int[] freq = new int[data.Length];
+                for (int i = 0; i < 1; i++)
+                {
+                    Complex[] dft = AMath.DFT(data[i]);
+
+                    double[] spectrum = new double[data[i].Length];
+                    for (int j = 0; j < spectrum.Length; j++)
+                    {
+                        spectrum[j] = Math.Sqrt(dft[j].Re * dft[j].Re + dft[j].Im * dft[j].Im);
+                    }
+
+                    double globalMax = 0;
+                    List<double> max = new List<double>();
+                    for (int j = 1; j < spectrum.Length - 1; j++)
+                    {
+                        if (spectrum[j - 1] < spectrum[j] && spectrum[j + 1] < spectrum[j])
+                        {
+                            max.Add(spectrum[j]);
+                            globalMax = spectrum[j] > globalMax ? spectrum[j] : globalMax;
+                        }
+                    }
+
+                    List<double> bordered = new List<double>();
+                    double border = 0.2 * globalMax;
+                    for (int j = 0; j < max.Count; j++)
+                    {
+                        if (max[j] >= border)
+                        {
+                            bordered.Add(max[j]);
+                        }
+                    }
+                    bordered.Sort();
+                    bordered.Reverse();
+
+                    List<double> differences = new List<double>();
+                    for (int j = 0; j < bordered.Count - 1; j++)
+                    {
+                        for (int k = j + 1; k < bordered.Count; k++)
+                        {
+                            differences.Add(bordered[j] - bordered[k]);
+                        }
+                    }
+                    differences.Sort();
+
+                    double median = 0;
+                    if (differences.Count != 1)
+                    {
+                        if (differences.Count % 2 == 0)
+                        {
+                            median = differences[differences.Count / 2];
+                        }
+                        else
+                        {
+                            int half = (differences.Count - 1) / 2;
+                            median = (differences[half] + differences[half + 1]) / 2;
+                        }
+                    }
+                    else
+                    {
+                        median = differences[0];
+                    }
+
+
+                    freq[i] = Convert.ToInt32((44100 / data[i].Length) * median);
+                }
             }
             catch (Exception e)
             {
