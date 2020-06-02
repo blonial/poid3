@@ -248,7 +248,7 @@ namespace poid.ViewModels
                 int[] freq = new int[data.Length];
                 for (int i = 0; i < 1; i++)
                 {
-                    Complex[] dft = AMath.DFT(data[i]);
+                    Complex[] dft = AMath.FFT(data[i]);
 
                     double[] spectrum = new double[data[i].Length];
                     for (int j = 0; j < spectrum.Length; j++)
@@ -307,15 +307,14 @@ namespace poid.ViewModels
                         median = differences[0];
                     }
 
-
-                    freq[i] = Convert.ToInt32((44100 / data[i].Length) * median);
+                    freq[i] = Convert.ToInt32((this.SampleRate / data[i].Length) * median);
                 }
+                this.FourierFreq = freq;
             }
             catch (Exception e)
             {
                 Notify.Error(e.Message);
             }
-
         }
 
         #endregion

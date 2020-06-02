@@ -7,7 +7,7 @@ namespace poid.Models
     {
         #region Static Methods
 
-        public static Complex[] DFT(float[] channel)
+        public static Complex[] FFT(float[] channel)
         {
             Complex[] data = new Complex[channel.Length];
 
@@ -16,14 +16,14 @@ namespace poid.Models
                 data[i] = new Complex(channel[i], 0);
             }
 
-            FourierTransform.DFT(data, FourierTransform.Direction.Forward);
+            FourierTransform.FFT(data, FourierTransform.Direction.Forward);
 
             return data;
         }
 
-        public static float[] IDFT(Complex[] data)
+        public static float[] IFFT(Complex[] data)
         {
-            FourierTransform.DFT(data, FourierTransform.Direction.Backward);
+            FourierTransform.FFT(data, FourierTransform.Direction.Backward);
 
             float[] result = new float[data.Length];
 
