@@ -15,6 +15,14 @@ namespace poid.ViewModels
     {
         #region Properties
 
+        #region View properties
+
+        public ObservableCollection<WindowType> WindowTypes { get; } = new ObservableCollection<WindowType> { WindowType.Gauss, WindowType.Hamming, WindowType.Hanning, WindowType.Bartlett };
+
+        #endregion
+
+        #region File properties
+
         private float[] _Channel;
         public float[] Channel
         {
@@ -57,7 +65,55 @@ namespace poid.ViewModels
             }
         }
 
-        public ObservableCollection<WindowType> WindowTypes { get; } = new ObservableCollection<WindowType> { WindowType.Gauss, WindowType.Hamming, WindowType.Hanning, WindowType.Bartlett };
+        private int _SampleRate;
+        public int SampleRate
+        {
+            get
+            {
+                return _SampleRate;
+            }
+            private set
+            {
+                _SampleRate = value;
+                NotifyPropertyChanged("SampleRate");
+            }
+        }
+
+        #endregion
+
+        #region Autocorrelation properties
+
+        private List<DataPoint> _AutocorrelationData;
+        public List<DataPoint> AutocorrelationData
+        {
+            get
+            {
+                return _AutocorrelationData;
+            }
+            set
+            {
+                _AutocorrelationData = value;
+                NotifyPropertyChanged("AutocorrelationData");
+            }
+        }
+
+        private int[] _AutocorrelationFreq;
+        public int[] AutocorrelationFreq
+        {
+            get
+            {
+                return _AutocorrelationFreq;
+            }
+            private set
+            {
+                _AutocorrelationFreq = value;
+                NotifyPropertyChanged("AutocorrelationFreq");
+            }
+        }
+
+        #endregion
+
+        #region Fourier properties
 
         private WindowType _SelectedWindowType;
         public WindowType SelectedWindowType
@@ -87,47 +143,21 @@ namespace poid.ViewModels
             }
         }
 
-        private int? _AutocorrelationFreq = null;
-        public int? AutocorrelationFreq
-        {
-            get
-            {
-                return _AutocorrelationFreq;
-            }
-            set
-            {
-                _AutocorrelationFreq = value;
-                NotifyPropertyChanged("AutocorrelationFreq");
-            }
-        }
-
-        private int? _FourierFreq = null;
-        public int? FourierFreq
+        private int[] _FourierFreq;
+        public int[] FourierFreq
         {
             get
             {
                 return _FourierFreq;
             }
-            set
+            private set
             {
                 _FourierFreq = value;
                 NotifyPropertyChanged("FourierFreq");
             }
         }
 
-        private List<DataPoint> _AutocorrelationData;
-        public List<DataPoint> AutocorrelationData
-        {
-            get
-            {
-                return _AutocorrelationData;
-            }
-            set
-            {
-                _AutocorrelationData = value;
-                NotifyPropertyChanged("AutocorrelationData");
-            }
-        }
+        #endregion
 
         #endregion
 
@@ -180,9 +210,11 @@ namespace poid.ViewModels
             {
                 float[] leftChannel;
                 float[] rightChannel;
-                WavReader.Read(openFileDialog.FileName, out leftChannel, out rightChannel);
+                int sampleRate;
+                WavReader.Read(openFileDialog.FileName, out leftChannel, out rightChannel, out sampleRate);
                 this.Channel = leftChannel;
                 this.FileName = openFileDialog.FileName;
+                this.SampleRate = sampleRate;
                 List<DataPoint> signal = new List<DataPoint>();
                 for (int i = 0; i < this.Channel.Length; i++)
                 {
@@ -195,14 +227,17 @@ namespace poid.ViewModels
 
         private void Autocorrelation(object o)
         {
-            float[] autocorrelation;
-            this.AutocorrelationFreq = Models.Autocorrelation.CalculateFreq(this.Channel, out autocorrelation);
+            float[] autocorrelation = Models.Autocorrelation.CalculateAutocorrelation(this.Channel);
+
             List<DataPoint> signal = new List<DataPoint>();
             for (int i = 0; i < autocorrelation.Length; i++)
             {
                 signal.Add(new DataPoint(i, autocorrelation[i]));
             }
             this.AutocorrelationData = signal;
+
+            float[][] data = FourierWindows.SplitData(this.Channel, 2205);
+            this.AutocorrelationFreq = Models.Autocorrelation.CalculateFrequencies(data, this.SampleRate);
         }
 
         private void FourierSpectrumAnalysis(object o)

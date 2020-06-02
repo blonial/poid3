@@ -5,9 +5,10 @@ namespace poid.Models
 {
     public static class WavReader
     {
-        public static bool Read(string filename, out float[] L, out float[] R)
+        public static bool Read(string filename, out float[] L, out float[] R, out int SampleRate)
         {
             L = R = null;
+            SampleRate = -1;
             try
             {
                 using (FileStream fs = File.Open(filename, FileMode.Open))
@@ -23,6 +24,7 @@ namespace poid.Models
                     int fmtCode = reader.ReadInt16();
                     int channels = reader.ReadInt16();
                     int sampleRate = reader.ReadInt32();
+
                     int byteRate = reader.ReadInt32();
                     int fmtBlockAlign = reader.ReadInt16();
                     int bitDepth = reader.ReadInt16();
@@ -40,6 +42,8 @@ namespace poid.Models
 
                     int bytesForSamp = bitDepth / 8;
                     int samps = bytes / bytesForSamp;
+
+                    SampleRate = sampleRate;
 
 
                     float[] asFloat = null;
