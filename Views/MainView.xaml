@@ -10,7 +10,8 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <Grid Grid.Row="0">
@@ -79,6 +80,25 @@
 
             <Label Grid.Row="1" Grid.Column="1" Height="26">Sigma</Label>
             <TextBox Grid.Row="1" Grid.Column="2" Height="26" Text="{Binding Sigma}"/>
+        </Grid>
+
+        <Grid Grid.Row="3">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="2*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <Button Grid.Row="0" Grid.Column="0" Height="26" Command="{Binding _SaveFile}">Save WAV file</Button>
+            <Label Grid.Row="0" Grid.Column="1" Height="26">Frequency</Label>
+            <TextBox Grid.Row="0" Grid.Column="2" Height="26" Text="{Binding Frequency}"/>
+
+            <Label Grid.Row="1" Grid.Column="1" Height="26">Duration</Label>
+            <TextBox Grid.Row="1" Grid.Column="2" Height="26" Text="{Binding Duration}"/>
         </Grid>
     </Grid>
 </UserControl>

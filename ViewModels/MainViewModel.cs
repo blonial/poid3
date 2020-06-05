@@ -79,6 +79,34 @@ namespace poid.ViewModels
             }
         }
 
+        private string _Frequency = "100";
+        public string Frequency
+        {
+            get
+            {
+                return _Frequency;
+            }
+            set
+            {
+                _Frequency = value;
+                NotifyPropertyChanged("Frequency");
+            }
+        }
+
+        private string _Duration = "2";
+        public string Duration
+        {
+            get
+            {
+                return _Duration;
+            }
+            set
+            {
+                _Duration = value;
+                NotifyPropertyChanged("Duration");
+            }
+        }
+
         #endregion
 
         #region Autocorrelation properties
@@ -176,6 +204,7 @@ namespace poid.ViewModels
         private void InitializeCommands()
         {
             this._LoadFile = new RelayCommand(this.LoadFile);
+            this._SaveFile = new RelayCommand(this.SaveFile);
             this._Autocorrelation = new RelayCommand(o => this.FileName != null, this.Autocorrelation);
             this._FourierSpectrumAnalysis = new RelayCommand(o => this.FileName != null, this.FourierSpectrumAnalysis);
         }
@@ -191,6 +220,8 @@ namespace poid.ViewModels
 
         public ICommand _LoadFile { get; private set; }
 
+        public ICommand _SaveFile { get; private set; }
+
         public ICommand _Autocorrelation { get; private set; }
 
         public ICommand _FourierSpectrumAnalysis { get; private set; }
@@ -198,6 +229,8 @@ namespace poid.ViewModels
         #endregion
 
         #region Methods
+
+        #region File methods
 
         private void LoadFile(object o)
         {
@@ -224,6 +257,35 @@ namespace poid.ViewModels
                 Notify.Info("WAV file loaded sucessfully!");
             }
         }
+
+        private void SaveFile(object o)
+        {
+            SaveFileDialog saveFileDialog = new SaveFileDialog();
+            saveFileDialog.Title = "Save WAV File";
+            saveFileDialog.DefaultExt = "wav";
+            saveFileDialog.Filter = "WAV files (*.wav)|*.wav";
+
+            try
+            {
+                double frequency = double.Parse(this._Frequency);
+                int duration = int.Parse(this._Duration);
+
+                if (saveFileDialog.ShowDialog() == true)
+                {
+                    WavWritter.Save(saveFileDialog.FileName, frequency, duration);
+                    Notify.Info("Wav file saved successfully!");
+                }
+            }
+            catch (Exception e)
+            {
+                Notify.Error(e.Message);
+            }
+
+        }
+
+        #endregion
+
+        #region Operations
 
         private void Autocorrelation(object o)
         {
@@ -316,6 +378,8 @@ namespace poid.ViewModels
                 Notify.Error(e.Message);
             }
         }
+
+        #endregion
 
         #endregion
     }

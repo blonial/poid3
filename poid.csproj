@@ -90,6 +90,7 @@
     <Compile Include="Models\Notify.cs" />
     <Compile Include="Models\NotifyPropertyChangedEvent.cs" />
     <Compile Include="Models\WavReader.cs" />
+    <Compile Include="Models\WavWritter.cs" />
     <Compile Include="ViewModels\MainViewModel.cs" />
     <Compile Include="Views\MainView.xaml.cs">
       <DependentUpon>MainView.xaml</DependentUpon>
