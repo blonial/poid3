@@ -23,8 +23,8 @@ namespace poid.ViewModels
 
         #region File properties
 
-        private float[] _Channel;
-        public float[] Channel
+        private double[] _Channel;
+        public double[] Channel
         {
             get
             {
@@ -241,13 +241,10 @@ namespace poid.ViewModels
 
             if (openFileDialog.ShowDialog() == true)
             {
-                float[] leftChannel;
-                float[] rightChannel;
-                int sampleRate;
-                WavReader.Read(openFileDialog.FileName, out leftChannel, out rightChannel, out sampleRate);
-                this.Channel = leftChannel;
+                WavData data = WavReader.ReadData(openFileDialog.FileName);
+                this.Channel = data.Samples;
                 this.FileName = openFileDialog.FileName;
-                this.SampleRate = sampleRate;
+                this.SampleRate = data.FormatChunk.SampleRate;
                 List<DataPoint> signal = new List<DataPoint>();
                 for (int i = 0; i < this.Channel.Length; i++)
                 {
@@ -289,7 +286,7 @@ namespace poid.ViewModels
 
         private void Autocorrelation(object o)
         {
-            float[] autocorrelation = Models.Autocorrelation.CalculateAutocorrelation(this.Channel);
+            double[] autocorrelation = Models.Autocorrelation.CalculateAutocorrelation(this.Channel);
 
             List<DataPoint> signal = new List<DataPoint>();
             for (int i = 0; i < autocorrelation.Length; i++)
@@ -298,7 +295,7 @@ namespace poid.ViewModels
             }
             this.AutocorrelationData = signal;
 
-            float[][] data = FourierWindows.SplitData(this.Channel, 2205);
+            double[][] data = FourierWindows.SplitData(this.Channel, 2048);
             this.AutocorrelationFreq = Models.Autocorrelation.CalculateFrequencies(data, this.SampleRate);
         }
 
@@ -306,67 +303,101 @@ namespace poid.ViewModels
         {
             try
             {
-                float[][] data = FourierWindows.Calculate(FourierWindows.SplitData(this.Channel, 2205), this.SelectedWindowType, float.Parse(this.Sigma));
+                double[][] data = FourierWindows.Calculate(FourierWindows.SplitData(this.Channel, 2048), this.SelectedWindowType, float.Parse(this.Sigma));
                 int[] freq = new int[data.Length];
-                for (int i = 0; i < 1; i++)
+                for (int i = 0; i < freq.Length; i++)
                 {
-                    Complex[] dft = AMath.FFT(data[i]);
-
-                    double[] spectrum = new double[data[i].Length];
-                    for (int j = 0; j < spectrum.Length; j++)
+                    double[] data2 = new double[data[i].Length];
+                    for (int j = 0; j < data[i].Length; j++)
                     {
-                        spectrum[j] = Math.Sqrt(dft[j].Re * dft[j].Re + dft[j].Im * dft[j].Im);
+                        if (j != 0)
+                        {
+                            data2[j] = data[i][j] - 0.94 * data[i][j - 1];
+                        }
+                        else
+                        {
+                            data2[j] = data[i][j];
+                        }
                     }
 
-                    double globalMax = 0;
-                    List<double> max = new List<double>();
+                    List<Complex> signal = new List<Complex>();
+                    for (int j = 0; j < data2.Length; j++)
+                    {
+                        signal.Add(new Complex(data2[j], 0));
+                    }
+                    List<Complex> dft = AMath.CalculateFastTransform(signal, AMath.CalculateWCoefficients(data2.Length, false), 0);
+                    dft.RemoveRange(dft.Count / 2, dft.Count / 2);
+
+                    double[] spectrum = new double[dft.Count];
+                    for (int j = 0; j < spectrum.Length; j++)
+                    {
+                        spectrum[j] = Math.Sqrt((dft[j].Re * dft[j].Re) + (dft[j].Im * dft[j].Im));
+                    }z
+
+                    List<int> max = new List<int>();
                     for (int j = 1; j < spectrum.Length - 1; j++)
                     {
                         if (spectrum[j - 1] < spectrum[j] && spectrum[j + 1] < spectrum[j])
                         {
-                            max.Add(spectrum[j]);
-                            globalMax = spectrum[j] > globalMax ? spectrum[j] : globalMax;
+                            max.Add(j);
                         }
                     }
 
-                    List<double> bordered = new List<double>();
-                    double border = 0.2 * globalMax;
+                    int globalMax = 0;
+                    double globalMaxVal = 0;
                     for (int j = 0; j < max.Count; j++)
                     {
-                        if (max[j] >= border)
+                        int index = max[j];
+                        double value = spectrum[index];
+                        if (value > globalMaxVal)
+                        {
+                            globalMax = index;
+                            globalMaxVal = value;
+                        }
+                    }
+
+                    double border = 0.2 * globalMaxVal;
+                    List<int> bordered = new List<int>();
+                    for (int j = 0; j < max.Count; j++)
+                    {
+                        if (spectrum[max[j]] >= border)
                         {
                             bordered.Add(max[j]);
                         }
                     }
-                    bordered.Sort();
-                    bordered.Reverse();
 
-                    List<double> differences = new List<double>();
-                    for (int j = 0; j < bordered.Count - 1; j++)
+                    double median;
+                    if (bordered.Count > 1)
                     {
-                        for (int k = j + 1; k < bordered.Count; k++)
+                        List<double> differences = new List<double>();
+                        for (int j = 0; j < max.Count - 1; j++)
                         {
-                            differences.Add(bordered[j] - bordered[k]);
+                            for (int k = j + 1; k < max.Count; k++)
+                            {
+                                differences.Add(Math.Abs(max[j] - max[k]));
+                            }
                         }
-                    }
-                    differences.Sort();
+                        differences.Sort();
 
-                    double median = 0;
-                    if (differences.Count != 1)
-                    {
-                        if (differences.Count % 2 == 0)
+                        if (differences.Count != 1)
                         {
-                            median = differences[differences.Count / 2];
+                            if (differences.Count % 2 == 0)
+                            {
+                                median = differences[differences.Count / 2];
+                            }
+                            else
+                            {
+                                int half = (differences.Count - 1) / 2;
+                                median = (differences[half] + differences[half + 1]) / 2;
+                            }
                         }
                         else
                         {
-                            int half = (differences.Count - 1) / 2;
-                            median = (differences[half] + differences[half + 1]) / 2;
+                            median = differences[0];
                         }
-                    }
-                    else
+                    } else
                     {
-                        median = differences[0];
+                        median = bordered[0];
                     }
 
                     freq[i] = Convert.ToInt32((this.SampleRate / data[i].Length) * median);

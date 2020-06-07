@@ -89,6 +89,8 @@
     <Compile Include="Models\FourierWindows.cs" />
     <Compile Include="Models\Notify.cs" />
     <Compile Include="Models\NotifyPropertyChangedEvent.cs" />
+    <Compile Include="Models\SoundHelper.cs" />
+    <Compile Include="Models\WavData.cs" />
     <Compile Include="Models\WavReader.cs" />
     <Compile Include="Models\WavWritter.cs" />
     <Compile Include="ViewModels\MainViewModel.cs" />

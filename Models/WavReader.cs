@@ -5,93 +5,88 @@ namespace poid.Models
 {
     public static class WavReader
     {
-        public static bool Read(string filename, out float[] L, out float[] R, out int SampleRate)
+        public static WavData ReadData(string fileName)
         {
-            L = R = null;
-            SampleRate = -1;
-            try
+            using (var fs = File.Open(fileName, FileMode.Open))
+            using (var reader = new BinaryReader(fs))
             {
-                using (FileStream fs = File.Open(filename, FileMode.Open))
+                var descriptorChunk = new WavData.Descriptor
                 {
-                    BinaryReader reader = new BinaryReader(fs);
+                    ChunkId = reader.ReadInt32(),
+                    ChunkSize = reader.ReadInt32(),
+                    Format = reader.ReadInt32()
+                };
 
-                    int chunkID = reader.ReadInt32();
-                    int fileSize = reader.ReadInt32();
-                    int riffType = reader.ReadInt32();
+                var formatChunk = new WavData.Format
+                {
+                    ChunkId = reader.ReadInt32(),
+                    ChunkSize = reader.ReadInt32(),
+                    AudioFormat = reader.ReadInt16(),
+                    NumChannels = reader.ReadInt16(),
+                    SampleRate = reader.ReadInt32(),
+                    ByteRate = reader.ReadInt32(),
+                    BlockAlign = reader.ReadInt16(),
+                    BitsPerSample = reader.ReadInt16()
+                };
 
-                    int fmtID = reader.ReadInt32();
-                    int fmtSize = reader.ReadInt32();
-                    int fmtCode = reader.ReadInt16();
-                    int channels = reader.ReadInt16();
-                    int sampleRate = reader.ReadInt32();
+                if (formatChunk.ChunkSize == 18)
+                {
+                    var extraDataSize = reader.ReadInt16();
+                    formatChunk.ExtraData = reader.ReadBytes(extraDataSize);
+                }
 
-                    int byteRate = reader.ReadInt32();
-                    int fmtBlockAlign = reader.ReadInt16();
-                    int bitDepth = reader.ReadInt16();
+                var dataChunk = new WavData.Data
+                {
+                    ChunkId = reader.ReadInt32(),
+                    ChunkSize = reader.ReadInt32(),
+                };
 
-                    if (fmtSize == 18)
+                dataChunk.RawData = reader.ReadBytes(dataChunk.ChunkSize);
+
+                var samplesSize = dataChunk.ChunkSize / formatChunk.BytesPerSample;
+                var samples = new double[samplesSize];
+
+                switch (formatChunk.BitsPerSample)
+                {
+                    case 64:
+                        var samples64 = new long[samplesSize];
+                        Buffer.BlockCopy(dataChunk.RawData, 0, samples64, 0, dataChunk.ChunkSize);
+                        samples = Array.ConvertAll(samples64, e => (double)e);
+                        break;
+                    case 32:
+                        var samples32 = new int[samplesSize];
+                        Buffer.BlockCopy(dataChunk.RawData, 0, samples32, 0, dataChunk.ChunkSize);
+                        samples = Array.ConvertAll(samples32, e => (double)e);
+
+                        break;
+                    case 16:
+                        var samples16 = new short[samplesSize];
+                        Buffer.BlockCopy(dataChunk.RawData, 0, samples16, 0, dataChunk.ChunkSize);
+                        samples = Array.ConvertAll(samples16, e => (double)e);
+                        break;
+                }
+
+                var numberOfChunks = samplesSize / SoundHelper.GetWindowSize(formatChunk.SampleRate);
+                var chunkedSamples = new double[numberOfChunks][];
+
+                for (int i = 0; i < numberOfChunks; i++)
+                {
+                    chunkedSamples[i] = new double[SoundHelper.GetWindowSize(formatChunk.SampleRate)];
+                    for (int j = 0; j < SoundHelper.GetWindowSize(formatChunk.SampleRate); j++)
                     {
-                        int fmtExtraSize = reader.ReadInt16();
-                        reader.ReadBytes(fmtExtraSize);
-                    }
-
-                    int dataID = reader.ReadInt32();
-                    int bytes = reader.ReadInt32();
-
-                    byte[] byteArray = reader.ReadBytes(bytes);
-
-                    int bytesForSamp = bitDepth / 8;
-                    int samps = bytes / bytesForSamp;
-
-                    SampleRate = sampleRate;
-
-
-                    float[] asFloat = null;
-                    switch (bitDepth)
-                    {
-                        case 64:
-                            double[]
-                            asDouble = new double[samps];
-                            Buffer.BlockCopy(byteArray, 0, asDouble, 0, bytes);
-                            asFloat = Array.ConvertAll(asDouble, e => (float)e);
-                            break;
-                        case 32:
-                            asFloat = new float[samps];
-                            Buffer.BlockCopy(byteArray, 0, asFloat, 0, bytes);
-                            break;
-                        case 16:
-                            Int16[]
-                            asInt16 = new Int16[samps];
-                            Buffer.BlockCopy(byteArray, 0, asInt16, 0, bytes);
-                            asFloat = Array.ConvertAll(asInt16, e => e / (float)Int16.MaxValue);
-                            break;
-                        default:
-                            return false;
-                    }
-
-                    switch (channels)
-                    {
-                        case 1:
-                            L = asFloat;
-                            R = null;
-                            return true;
-                        case 2:
-                            L = new float[samps];
-                            R = new float[samps];
-                            for (int i = 0, s = 0; i < samps; i++)
-                            {
-                                L[i] = asFloat[s++];
-                                R[i] = asFloat[s++];
-                            }
-                            return true;
-                        default:
-                            return false;
+                        chunkedSamples[i][j] = samples[SoundHelper.GetWindowSize(formatChunk.SampleRate) * i + j];
                     }
                 }
-            }
-            catch
-            {
-                return false;
+
+                return new WavData
+                {
+                    DescriptorChunk = descriptorChunk,
+                    FormatChunk = formatChunk,
+                    DataChunk = dataChunk,
+                    NumberOfChunks = numberOfChunks,
+                    ChunkedSamples = chunkedSamples,
+                    Samples = samples
+                };
             }
         }
     }

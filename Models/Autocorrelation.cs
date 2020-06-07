@@ -4,13 +4,13 @@
     {
         #region Static methods
 
-        public static int CalculateFreq(float[] channel, int sampleRate)
+        public static int CalculateFreq(double[] channel, int sampleRate)
         {
-            float[] autocorrelation = new float[channel.Length];
+            double[] autocorrelation = new double[channel.Length];
 
             for (int m = 0; m < autocorrelation.Length; m++)
             {
-                float sum = 0;
+                double sum = 0;
                 for (int n = 0; n < channel.Length - m; n++)
                 {
                     sum += channel[n] * channel[n + m];
@@ -29,7 +29,7 @@
             return -1;
         }
 
-        public static int[] CalculateFrequencies(float[][] channels, int sampleRate)
+        public static int[] CalculateFrequencies(double[][] channels, int sampleRate)
         {
             int[] result = new int[channels.Length];
 
@@ -41,13 +41,13 @@
             return result;
         }
 
-        public static float[] CalculateAutocorrelation(float[] channel)
+        public static double[] CalculateAutocorrelation(double[] channel)
         {
-            float[] autocorrelation = new float[channel.Length];
+            double[] autocorrelation = new double[channel.Length];
 
             for (int m = 0; m < autocorrelation.Length; m++)
             {
-                float sum = 0;
+                double sum = 0;
                 for (int n = 0; n < channel.Length - m; n++)
                 {
                     sum += channel[n] * channel[n + m];
