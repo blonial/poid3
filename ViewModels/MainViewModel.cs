@@ -6,6 +6,7 @@ using poid.Models;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Windows.Input;
 using static poid.Models.FourierWindows;
 
@@ -18,6 +19,34 @@ namespace poid.ViewModels
         #region View properties
 
         public ObservableCollection<WindowType> WindowTypes { get; } = new ObservableCollection<WindowType> { WindowType.Gauss, WindowType.Hamming, WindowType.Hanning, WindowType.Bartlett };
+
+        private string _AutocorrelationResult = "";
+        public string AutocorrelationResult
+        {
+            get
+            {
+                return _AutocorrelationResult;
+            }
+            private set
+            {
+                _AutocorrelationResult = value;
+                NotifyPropertyChanged("AutocorrelationResult");
+            }
+        }
+
+        private string _FourierResult = "";
+        public string FourierResult
+        {
+            get
+            {
+                return _FourierResult;
+            }
+            private set
+            {
+                _FourierResult = value;
+                NotifyPropertyChanged("FourierResult");
+            }
+        }
 
         #endregion
 
@@ -195,6 +224,7 @@ namespace poid.ViewModels
         {
             this.InitializeCommands();
             this.InitializeWindowTypes();
+            this.InitializeEventListeners();
         }
 
         #endregion
@@ -207,11 +237,71 @@ namespace poid.ViewModels
             this._SaveFile = new RelayCommand(this.SaveFile);
             this._Autocorrelation = new RelayCommand(o => this.FileName != null, this.Autocorrelation);
             this._FourierSpectrumAnalysis = new RelayCommand(o => this.FileName != null, this.FourierSpectrumAnalysis);
+            this._SaveAutocorrelationAsWavFile = new RelayCommand(o => this.AutocorrelationFreq != null, this.SaveAutocorrelationAsWavFile);
+            this._SaveFourierAsWavFile = new RelayCommand(o => this.FourierFreq != null, this.SaveFourierAsWavFile);
         }
 
         private void InitializeWindowTypes()
         {
-            this.SelectedWindowType = this.WindowTypes[0];
+            this.SelectedWindowType = this.WindowTypes[1];
+        }
+
+        private void InitializeEventListeners()
+        {
+            this.PropertyChanged += this.HandleAutocorrelationFrequencyChanged;
+            this.PropertyChanged += this.HandleFourierFrequencyChanged;
+        }
+
+        #endregion
+
+        #region Event listeners
+
+        private void HandleAutocorrelationFrequencyChanged(object sender, PropertyChangedEventArgs args)
+        {
+            if (args.PropertyName == "AutocorrelationFreq")
+            {
+                if (this.AutocorrelationFreq != null)
+                {
+                    double distance = Math.Round(2048.0 * 1000 / this.SampleRate, 2, MidpointRounding.AwayFromZero);
+                    double start = 0;
+                    string result = "";
+                    for (int i = 0; i < this.AutocorrelationFreq.Length; i++)
+                    {
+                        double end = start + distance;
+                        result += start + "ms - " + end + "ms [" + this.AutocorrelationFreq[i] + "Hz]; ";
+                        start += distance;
+                    }
+                    this.AutocorrelationResult = result;
+                }
+                else
+                {
+                    this.AutocorrelationResult = "";
+                }
+            }
+        }
+
+        private void HandleFourierFrequencyChanged(object sender, PropertyChangedEventArgs args)
+        {
+            if (args.PropertyName == "FourierFreq")
+            {
+                if (this.FourierFreq != null)
+                {
+                    double distance = Math.Round(2048.0 * 1000 / this.SampleRate, 2, MidpointRounding.AwayFromZero);
+                    double start = 0;
+                    string result = "";
+                    for (int i = 0; i < this.FourierFreq.Length; i++)
+                    {
+                        double end = start + distance;
+                        result += start + "ms - " + end + "ms [" + this.FourierFreq[i] + "Hz]; ";
+                        start += distance;
+                    }
+                    this.FourierResult = result;
+                }
+                else
+                {
+                    this.FourierResult = "";
+                }
+            }
         }
 
         #endregion
@@ -225,6 +315,10 @@ namespace poid.ViewModels
         public ICommand _Autocorrelation { get; private set; }
 
         public ICommand _FourierSpectrumAnalysis { get; private set; }
+
+        public ICommand _SaveAutocorrelationAsWavFile { get; private set; }
+
+        public ICommand _SaveFourierAsWavFile { get; private set; }
 
         #endregion
 
@@ -251,6 +345,9 @@ namespace poid.ViewModels
                     signal.Add(new DataPoint(i, this.Channel[i]));
                 }
                 this.Signal = signal;
+                this.AutocorrelationFreq = null;
+                this.FourierFreq = null;
+                this.AutocorrelationData = null;
                 Notify.Info("WAV file loaded sucessfully!");
             }
         }
@@ -277,7 +374,30 @@ namespace poid.ViewModels
             {
                 Notify.Error(e.Message);
             }
+        }
 
+        private void SaveFreqArrayAsWavFile(int[] freq)
+        {
+            SaveFileDialog saveFileDialog = new SaveFileDialog();
+            saveFileDialog.Title = "Save WAV File";
+            saveFileDialog.DefaultExt = "wav";
+            saveFileDialog.Filter = "WAV files (*.wav)|*.wav";
+
+            try
+            {
+                double frequency = double.Parse(this._Frequency);
+                int duration = int.Parse(this._Duration);
+
+                if (saveFileDialog.ShowDialog() == true)
+                {
+                    WavWritter.SaveFrequencies(saveFileDialog.FileName, freq);
+                    Notify.Info("Wav file saved successfully!");
+                }
+            }
+            catch (Exception e)
+            {
+                Notify.Error(e.Message);
+            }
         }
 
         #endregion
@@ -332,7 +452,7 @@ namespace poid.ViewModels
                     for (int j = 0; j < spectrum.Length; j++)
                     {
                         spectrum[j] = Math.Sqrt((dft[j].Re * dft[j].Re) + (dft[j].Im * dft[j].Im));
-                    }z
+                    }
 
                     List<int> max = new List<int>();
                     for (int j = 1; j < spectrum.Length - 1; j++)
@@ -395,7 +515,8 @@ namespace poid.ViewModels
                         {
                             median = differences[0];
                         }
-                    } else
+                    }
+                    else
                     {
                         median = bordered[0];
                     }
@@ -408,6 +529,16 @@ namespace poid.ViewModels
             {
                 Notify.Error(e.Message);
             }
+        }
+
+        private void SaveAutocorrelationAsWavFile(object o)
+        {
+            this.SaveFreqArrayAsWavFile(this.AutocorrelationFreq);
+        }
+
+        private void SaveFourierAsWavFile(object o)
+        {
+            this.SaveFreqArrayAsWavFile(this.FourierFreq);
         }
 
         #endregion
